@@ -13,14 +13,12 @@
     <style>
         body { margin: 0; overflow: hidden; background-color: #000000; font-family: 'Segoe UI', sans-serif; }
         #canvas-container { width: 100%; height: 100vh; display: block; }
-    
-        /* UI Center Vandiep */
+        
         #ui-layer {
             position: absolute; bottom: 30px; width: 100%;
             text-align: center; pointer-events: none; z-index: 100;
         }
         
-        /* Guide text Vandiep */
         .guide { 
             color: rgba(255, 255, 255, 0.6); 
             font-size: 13px; 
@@ -39,7 +37,6 @@
         }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
 
-        /* Camera Preview Vandiep */
         #camera-preview {
             position: absolute; top: 15px; right: 15px;
             width: 120px; height: 90px;
@@ -47,7 +44,6 @@
             transform: scaleX(-1); opacity: 0.6; border-radius: 8px;
         }
         
-        /* Vandiep */
         #copyright {
             position: absolute;
             bottom: 10px;
@@ -60,19 +56,6 @@
             font-style: italic;
         }
 
-        #error-log { 
-            position: absolute; 
-            top: 0; 
-            left: 0; 
-            color: red; 
-            background: rgba(0,0,0,0.8); 
-            z-index: 999; 
-            padding: 10px;
-            font-size: 12px;
-            max-width: 300px;
-        }
-        
-        /* Debug info Vandiep */
         #debug-info {
             position: absolute;
             top: 10px;
@@ -83,46 +66,22 @@
             font-size: 12px;
             z-index: 1000;
             border-radius: 5px;
-            border: 1px solid rgba(255,255,255,0.2);
         }
-        
-        #debug-info div {
-            margin: 3px 0;
-            font-family: monospace;
-        }
-        
-        #debug-info span {
-            color: #FFD700;
-            font-weight: bold;
-        }
-        
-        .debug-success { color: #00FF00; }
-        .debug-error { color: #FF5555; }
-        .debug-warning { color: #FFFF00; }
     </style>
 </head>
 <body>
-    <div id="error-log"></div>
-    
-    <!-- Debug Panel Vandiep -->
     <div id="debug-info">
         <div>State: <span id="debug-state">-</span></div>
-        <div>Textures loaded: <span id="debug-textures">0/5</span></div>
-        <div>Selected photo: <span id="debug-selected">-</span></div>
-        <div>Hand X: <span id="debug-handx">0.5</span></div>
-        <div>System: <span id="debug-system" class="debug-warning">NOT STARTED</span></div>
+        <div>Textures: <span id="debug-textures">0/5</span></div>
     </div>
 
-    <!-- UI Vandiep -->
     <div id="ui-layer">
-        <!-- Vandiep -->
         <div class="guide">
             🖐 <b>Open:</b> Explode &nbsp;|&nbsp; 🫶 <b>Heart:</b> Love &nbsp;|&nbsp; ✊ <b>Fist:</b> Tree
         </div>
         <button id="btnStart" onclick="startSystem()">START MAGIC</button>
     </div>
 
-    <!-- Vandiep -->
     <div id="copyright">© by vandiep</div>
 
     <div id="canvas-container"></div>
@@ -130,827 +89,301 @@
     <canvas id="camera-preview"></canvas>
 
     <script>
-        // ==========================================
-        // 1. RESOURCES CONFIG Vandiep
-        // ==========================================
-        const MUSIC_URL = "./audio.mp3";
+        // ================= FIXED CODE =================
+        const MUSIC_URL = "audio.mp3";  // FIXED: removed ./
         let bgMusic = new Audio(MUSIC_URL);
-        bgMusic.loop = true; bgMusic.volume = 1.0;
-        
-        // ==========================================
-        // TEXTURE LOADING WITH ERROR HANDLING Vandiep
-        // ==========================================
+        bgMusic.loop = true; bgMusic.volume = 0.7;
+
+        // SIMPLIFIED - Direct loading for GitHub Pages
         const photoFiles = [
-            './image1.jpg',
-            './image2.jpg', 
-            './image3.jpg',
-            './image4.jpg', 
-            './image5.jpg'
-        ];
-        
-        // Fallback URLs in case local files don't exist Vandiep
-        const fallbackUrls = [
-            'https://images.unsplash.com/photo-1541963463532-d68292c34b19?w=512&h=512&fit=crop',
-            'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=512&h=512&fit=crop',
-            'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=512&h=512&fit=crop',
-            'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=512&h=512&fit=crop',
-            'https://images.unsplash.com/photo-1486427944299-d1955d23e34d?w=512&h=512&fit=crop'
+            "image1.jpg",
+            "image2.jpg",
+            "image3.jpg",
+            "image4.jpg",
+            "image5.jpg"
         ];
         
         const photoTextures = [];
-        let loadedTextureCount = 0;
-        let textureErrors = [];
-        
-        function createDefaultTexture(text = "NO IMAGE") {
-            const canvas = document.createElement('canvas');
-            canvas.width = 512;
-            canvas.height = 512;
-            const ctx = canvas.getContext('2d');
-            
-            // Gradient background Vandiep
-            const gradient = ctx.createLinearGradient(0, 0, 512, 512);
-            gradient.addColorStop(0, '#1a1a2e');
-            gradient.addColorStop(1, '#16213e');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, 512, 512);
-            
-            // Border Vandiep
-            ctx.strokeStyle = '#FFD700';
-            ctx.lineWidth = 10;
-            ctx.strokeRect(10, 10, 492, 492);
-            
-            // Text Vandiep
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = 'bold 40px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(text, 256, 200);
-            
-            ctx.font = '20px Arial';
-            ctx.fillText('Failed to load image', 256, 260);
-            ctx.fillText('Check console for errors', 256, 290);
-            
-            // Error icon Vandiep
-            ctx.beginPath();
-            ctx.arc(256, 350, 40, 0, Math.PI * 2);
-            ctx.fillStyle = '#FF5555';
-            ctx.fill();
-            
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = 'bold 60px Arial';
-            ctx.fillText('!', 256, 360);
-            
-            return new THREE.CanvasTexture(canvas);
-        }
+        let loadedTextures = 0;
         
         function loadTextures() {
-            console.log('🔍 Starting texture loading... Vandiep');
-            console.log('Looking for files:', photoFiles);
-            
+            console.log("🔄 Loading textures for GitHub Pages...");
             const loader = new THREE.TextureLoader();
             
-            // First check if local files exist Vandiep
             photoFiles.forEach((file, index) => {
-                // Test if file exists Vandiep
-                const testImg = new Image();
-                testImg.onload = () => {
-                    console.log(`✅ Local file exists: ${file} Vandiep`);
-                    // Load with Three.js loader Vandiep
-                    photoTextures[index] = loader.load(
-                        file,
-                        (texture) => {
-                            console.log(`✅ Texture ${index} loaded successfully: ${file}`);
-                            console.log(`  Size: ${texture.image.width}x${texture.image.height} Vandiep`);
-                            loadedTextureCount++;
-                            updateDebugInfo();
-                            texture.needsUpdate = true;
-                        },
-                        undefined,
-                        (error) => {
-                            console.error(`❌ Three.js failed to load: ${file}`, error);
-                            textureErrors.push(`Index ${index}: ${file}`);
-                            // Try fallback Vandiep
-                            tryFallbackLoad(index);
-                        }
-                    );
-                };
-                
-                testImg.onerror = () => {
-                    console.warn(`⚠️ Local file not found: ${file} Vandiep`);
-                    // Try fallback immediately Vandiep
-                    tryFallbackLoad(index);
-                };
-                
-                testImg.src = file;
-            });
-            
-            function tryFallbackLoad(index) {
-                console.log(`🔄 Trying fallback for image ${index} Vandiep`);
-                const fallbackUrl = fallbackUrls[index];
-                
                 photoTextures[index] = loader.load(
-                    fallbackUrl,
+                    file,
                     (texture) => {
-                        console.log(`✅ Fallback ${index} loaded: ${fallbackUrl}`);
-                        loadedTextureCount++;
-                        updateDebugInfo();
+                        loadedTextures++;
+                        console.log(`✅ Loaded: ${file}`);
+                        updateDebug();
                         texture.needsUpdate = true;
                     },
                     undefined,
                     (error) => {
-                        console.error(`❌ Fallback also failed for index ${index}`, error);
-                        // Create default texture Vandiep
-                        photoTextures[index] = createDefaultTexture(`Photo ${index+1}`);
-                        loadedTextureCount++;
-                        updateDebugInfo();
+                        console.error(`❌ Failed: ${file}`, error);
+                        // Create colored placeholder
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 512; canvas.height = 512;
+                        const ctx = canvas.getContext('2d');
+                        const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF'];
+                        ctx.fillStyle = colors[index];
+                        ctx.fillRect(0, 0, 512, 512);
+                        ctx.fillStyle = 'white';
+                        ctx.font = '40px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(`Photo ${index+1}`, 256, 256);
+                        photoTextures[index] = new THREE.CanvasTexture(canvas);
+                        loadedTextures++;
+                        updateDebug();
                     }
                 );
-            }
-            
-            // Set a timeout to check loading Vandiep
-            setTimeout(() => {
-                if (loadedTextureCount === 0) {
-                    console.warn('⚠️ No textures loaded after 3 seconds, using defaults Vandiep');
-                    for (let i = 0; i < 5; i++) {
-                        if (!photoTextures[i]) {
-                            photoTextures[i] = createDefaultTexture(`Photo ${i+1}`);
-                        }
-                    }
-                    loadedTextureCount = 5;
-                    updateDebugInfo();
-                }
-            }, 3000);
+            });
         }
         
-        function createCustomTexture(type) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 128; canvas.height = 128;
-            const ctx = canvas.getContext('2d');
-            const cx = 64, cy = 64;
-
-            if (type === 'gold_glow') {
-                const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 40);
-                grd.addColorStop(0, '#FFFFFF'); 
-                grd.addColorStop(0.2, '#FFFFE0'); 
-                grd.addColorStop(0.5, '#FFD700');
-                grd.addColorStop(1, 'rgba(0,0,0,0)');
-                ctx.fillStyle = grd; ctx.fillRect(0,0,128,128);
-
-            } else if (type === 'red_light') {
-                const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 50);
-                grd.addColorStop(0, '#FFAAAA'); 
-                grd.addColorStop(0.3, '#FF0000'); 
-                grd.addColorStop(1, 'rgba(0,0,0,0)');
-                ctx.fillStyle = grd; ctx.fillRect(0,0,128,128);
-
-            } else if (type === 'gift_red') {
-                ctx.fillStyle = '#D32F2F'; ctx.fillRect(20, 20, 88, 88);
-                ctx.fillStyle = '#FFD700'; ctx.fillRect(54, 20, 20, 88); ctx.fillRect(20, 54, 88, 20);
-                ctx.strokeStyle = "rgba(0,0,0,0.3)"; ctx.lineWidth=2; ctx.strokeRect(20,20,88,88);
-            }
-            return new THREE.CanvasTexture(canvas);
+        function updateDebug() {
+            document.getElementById('debug-textures').textContent = `${loadedTextures}/5`;
         }
 
-        const textures = {
-            gold: createCustomTexture('gold_glow'),
-            red: createCustomTexture('red_light'),
-            gift: createCustomTexture('gift_red')
-        };
-
-        // ==========================================
-        // 2. SYSTEM CONFIG Vandiep
-        // ==========================================
+        // Three.js config
         const CONFIG = {
-            goldCount: 2000,
-            redCount: 300,
-            giftCount: 150,
-            explodeRadius: 65,  
+            goldCount: 1000,
+            redCount: 200,
+            giftCount: 100,
+            explodeRadius: 50,
             photoOrbitRadius: 25,
-            treeHeight: 70,
-            treeBaseRadius: 35
+            treeHeight: 60,
+            treeBaseRadius: 25
         };
 
         let scene, camera, renderer;
-        let groupGold, groupRed, groupGift; 
-        let photoMeshes = [];    
-        let titleMesh, starMesh, loveMesh;
-        
-        let state = 'TREE'; 
-        let selectedIndex = 0;
+        let groupGold, groupRed, groupGift;
+        let photoMeshes = [];
+        let state = 'TREE';
         let handX = 0.5;
-        let systemStarted = false;
 
-        // ==========================================
-        // 3. DEBUG FUNCTIONS Vandiep
-        // ==========================================
-        function updateDebugInfo() {
-            if (!systemStarted) return;
-            
-            const debugState = document.getElementById('debug-state');
-            const debugTextures = document.getElementById('debug-textures');
-            const debugSelected = document.getElementById('debug-selected');
-            const debugHandX = document.getElementById('debug-handx');
-            const debugSystem = document.getElementById('debug-system');
-            
-            if (debugState) debugState.textContent = state;
-            if (debugTextures) debugTextures.textContent = `${loadedTextureCount}/5`;
-            if (debugSelected) debugSelected.textContent = selectedIndex;
-            if (debugHandX) debugHandX.textContent = handX.toFixed(3);
-            
-            if (debugSystem) {
-                if (loadedTextureCount === 5) {
-                    debugSystem.textContent = "READY";
-                    debugSystem.className = "debug-success";
-                } else if (loadedTextureCount > 0) {
-                    debugSystem.textContent = "LOADING...";
-                    debugSystem.className = "debug-warning";
-                } else {
-                    debugSystem.textContent = "NO TEXTURES";
-                    debugSystem.className = "debug-error";
-                }
-            }
-        }
-        
-        function logError(message) {
-            console.error('❌', message);
-            const errorLog = document.getElementById('error-log');
-            if (errorLog) {
-                errorLog.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
-                errorLog.style.display = 'block';
-            }
-        }
-
-        // ==========================================
-        // 4. THREE.JS SYSTEM Vandiep
-        // ==========================================
         function init3D() {
-            try {
-                const container = document.getElementById('canvas-container');
-                scene = new THREE.Scene();
-                scene.fog = new THREE.FogExp2(0x000000, 0.002);
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x000000, 0.002);
 
-                camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
-                camera.position.z = 100;
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+            camera.position.z = 80;
 
-                renderer = new THREE.WebGLRenderer({ 
-                    antialias: true, 
-                    alpha: false,
-                    powerPreference: "high-performance"
-                });
-                renderer.setSize(window.innerWidth, window.innerHeight);
-                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-                container.appendChild(renderer.domElement);
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
 
-                groupGold = createParticleSystem('gold', CONFIG.goldCount, 2.0);
-                groupRed = createParticleSystem('red', CONFIG.redCount, 3.5); 
-                groupGift = createParticleSystem('gift', CONFIG.giftCount, 3.0); 
+            // Create particles
+            groupGold = createParticleSystem('gold', CONFIG.goldCount, 2.0);
+            groupRed = createParticleSystem('red', CONFIG.redCount, 3.0);
+            groupGift = createParticleSystem('gift', CONFIG.giftCount, 2.5);
 
-                createPhotos();
-                createDecorations();
-                animate();
-                
-                console.log('✅ Three.js initialized successfully Vandiep');
-            } catch (error) {
-                logError(`Three.js initialization failed: ${error.message}`);
-            }
+            createPhotos();
+            animate();
         }
 
         function createParticleSystem(type, count, size) {
-            const pPositions = [];
-            const pExplodeTargets = [];
-            const pTreeTargets = [];
-            const pHeartTargets = [];
-            const sizes = []; 
-            const phases = []; 
+            const positions = [];
+            const treeTargets = [];
+            const explodeTargets = [];
             
-            for(let i=0; i<count; i++) {
-                // --- TREE Vandiep ---
-                const h = Math.random() * CONFIG.treeHeight; 
-                const y = h - CONFIG.treeHeight / 2;
-                let radiusRatio = (type === 'gold') ? Math.sqrt(Math.random()) : 0.9 + Math.random()*0.1;
-                const maxR = (1 - (h / CONFIG.treeHeight)) * CONFIG.treeBaseRadius;
-                const r = maxR * radiusRatio; 
+            for(let i = 0; i < count; i++) {
+                // Tree shape
+                const h = Math.random() * CONFIG.treeHeight;
+                const y = h - CONFIG.treeHeight/2;
+                const ratio = (CONFIG.treeHeight - h) / CONFIG.treeHeight;
+                const r = ratio * CONFIG.treeBaseRadius * Math.random();
+                const angle = Math.random() * Math.PI * 2;
+                treeTargets.push(
+                    Math.cos(angle) * r,
+                    y,
+                    Math.sin(angle) * r
+                );
+                
+                // Explode shape
+                const phi = Math.acos(2 * Math.random() - 1);
                 const theta = Math.random() * Math.PI * 2;
-                pTreeTargets.push(r * Math.cos(theta), y, r * Math.sin(theta));
-
-                // --- EXPLODE Vandiep ---
-                const u = Math.random();
-                const v = Math.random();
-                const phi = Math.acos(2 * v - 1);
-                const lam = 2 * Math.PI * u;
-                let radMult = (type === 'gift') ? 1.2 : 1.0;
-                const rad = CONFIG.explodeRadius * Math.cbrt(Math.random()) * radMult;
-                pExplodeTargets.push(rad * Math.sin(phi) * Math.cos(lam), rad * Math.sin(phi) * Math.sin(lam), rad * Math.cos(phi));
-
-                // --- SOFT HEART Vandiep ---
-                const tHeart = Math.random() * Math.PI * 2;
-                let hx = 16 * Math.pow(Math.sin(tHeart), 3);
-                let hy = 13 * Math.cos(tHeart) - 5 * Math.cos(2*tHeart) - 2 * Math.cos(3*tHeart) - Math.cos(4*tHeart);
+                const radius = CONFIG.explodeRadius * Math.random();
+                explodeTargets.push(
+                    radius * Math.sin(phi) * Math.cos(theta),
+                    radius * Math.sin(phi) * Math.sin(theta),
+                    radius * Math.cos(phi)
+                );
                 
-                const rFill = Math.pow(Math.random(), 0.3); // Soft fill Vandiep
-                hx *= rFill; hy *= rFill;
-                let hz = (Math.random() - 0.5) * 8 * rFill; 
-                
-                const noise = 1.0;
-                hx += (Math.random() - 0.5) * noise;
-                hy += (Math.random() - 0.5) * noise;
-                hz += (Math.random() - 0.5) * noise;
-
-                const scaleH = 2.2;
-                pHeartTargets.push(hx * scaleH, hy * scaleH + 5, hz); 
-
-                // --- INIT Vandiep ---
-                pPositions.push(pTreeTargets[i*3], pTreeTargets[i*3+1], pTreeTargets[i*3+2]);
-                sizes.push(size);
-                phases.push(Math.random() * Math.PI * 2);
+                positions.push(treeTargets[i*3], treeTargets[i*3+1], treeTargets[i*3+2]);
             }
 
-            const geo = new THREE.BufferGeometry();
-            geo.setAttribute('position', new THREE.Float32BufferAttribute(pPositions, 3));
-            geo.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
-            
-            // Init colors Vandiep
-            const colors = new Float32Array(count * 3);
-            const baseColor = new THREE.Color();
-            if(type === 'gold') baseColor.setHex(0xFFD700);
-            else if(type === 'red') baseColor.setHex(0xFF0000);
-            else baseColor.setHex(0xFFFFFF);
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.userData = { tree: treeTargets, explode: explodeTargets };
 
-            for(let i=0; i<count; i++) {
-                colors[i*3] = baseColor.r;
-                colors[i*3+1] = baseColor.g;
-                colors[i*3+2] = baseColor.b;
-            }
-            geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-            
-            geo.userData = { 
-                tree: pTreeTargets, explode: pExplodeTargets, heart: pHeartTargets, 
-                phases: phases, baseColor: baseColor, baseSize: size
-            };
-
-            const mat = new THREE.PointsMaterial({
+            const material = new THREE.PointsMaterial({
                 size: size,
-                map: textures[type],
-                transparent: true, 
-                opacity: 1.0,
-                vertexColors: true, 
-                blending: (type === 'gift') ? THREE.NormalBlending : THREE.AdditiveBlending, 
-                depthWrite: false,
-                sizeAttenuation: true
+                color: type === 'gold' ? 0xFFD700 : type === 'red' ? 0xFF0000 : 0xFFFFFF,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
             });
 
-            const points = new THREE.Points(geo, mat);
+            const points = new THREE.Points(geometry, material);
             scene.add(points);
             return points;
         }
 
         function createPhotos() {
-            const geo = new THREE.PlaneGeometry(8, 8);
-            const borderGeo = new THREE.PlaneGeometry(9, 9); 
-            const borderMat = new THREE.MeshBasicMaterial({ 
-                color: 0xFFD700,
-                transparent: true,
-                opacity: 0.8
-            }); 
-
-            for(let i=0; i<5; i++) {
-                // Ensure texture exists Vandiep
-                let texture = photoTextures[i];
-                if (!texture) {
-                    console.warn(`⚠️ Texture ${i} not loaded, using default Vandiep`);
-                    texture = createDefaultTexture(`Photo ${i+1}`);
-                }
-                
-                const mat = new THREE.MeshBasicMaterial({ 
-                    map: texture, 
+            const geometry = new THREE.PlaneGeometry(8, 8);
+            
+            for(let i = 0; i < 5; i++) {
+                const material = new THREE.MeshBasicMaterial({
+                    map: photoTextures[i] || null,
                     side: THREE.DoubleSide,
                     transparent: true
                 });
                 
-                const mesh = new THREE.Mesh(geo, mat);
-                const border = new THREE.Mesh(borderGeo, borderMat);
-                border.position.z = -0.1; 
-                mesh.add(border);
-                mesh.visible = false; 
-                mesh.scale.set(0,0,0);
-                mesh.userData.index = i;
-                
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.visible = false;
+                mesh.scale.set(0, 0, 0);
                 scene.add(mesh);
                 photoMeshes.push(mesh);
-                
-                console.log(`✅ Photo mesh ${i} created Vandiep`);
-            }
-        }
-
-        function createDecorations() {
-            // MERRY CHRISTMAS Vandiep
-            const canvas = document.createElement('canvas');
-            canvas.width = 1024; canvas.height = 256;
-            const ctx = canvas.getContext('2d');
-            ctx.font = 'bold italic 90px "Times New Roman"';
-            ctx.fillStyle = '#FFD700'; 
-            ctx.textAlign = 'center';
-            ctx.shadowColor = "#FF0000"; 
-            ctx.shadowBlur = 40; 
-            ctx.fillText("MERRY CHRISTMAS", 512, 130);
-            const tex = new THREE.CanvasTexture(canvas);
-            const mat = new THREE.MeshBasicMaterial({ 
-                map: tex, 
-                transparent: true, 
-                opacity: 0.9,
-                blending: THREE.AdditiveBlending 
-            });
-            titleMesh = new THREE.Mesh(new THREE.PlaneGeometry(60, 15), mat);
-            titleMesh.position.set(0, 50, 0);
-            scene.add(titleMesh);
-
-            // STAR Vandiep
-            const starCanvas = document.createElement('canvas');
-            starCanvas.width = 128; starCanvas.height = 128;
-            const sCtx = starCanvas.getContext('2d');
-            sCtx.fillStyle = "#FFFF00"; 
-            sCtx.shadowColor="#FFF"; 
-            sCtx.shadowBlur=20;
-            sCtx.beginPath();
-            const cx=64, cy=64, outer=50, inner=20;
-            for(let i=0; i<5; i++){
-                sCtx.lineTo(cx + Math.cos((18+i*72)/180*Math.PI)*outer, cy - Math.sin((18+i*72)/180*Math.PI)*outer);
-                sCtx.lineTo(cx + Math.cos((54+i*72)/180*Math.PI)*inner, cy - Math.sin((54+i*72)/180*Math.PI)*inner);
-            }
-            sCtx.closePath(); 
-            sCtx.fill();
-            const starTex = new THREE.CanvasTexture(starCanvas);
-            const starMat = new THREE.MeshBasicMaterial({ 
-                map: starTex, 
-                transparent: true, 
-                opacity: 0.8,
-                blending: THREE.AdditiveBlending 
-            });
-            starMesh = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), starMat);
-            starMesh.position.set(0, CONFIG.treeHeight/2 + 2, 0);
-            scene.add(starMesh);
-
-            // I LOVE YOU TEXT Vandiep
-            const loveCanvas = document.createElement('canvas');
-            loveCanvas.width = 1024; loveCanvas.height = 256;
-            const lCtx = loveCanvas.getContext('2d');
-            lCtx.font = 'bold 120px "Segoe UI", sans-serif';
-            lCtx.fillStyle = '#FF69B4'; 
-            lCtx.textAlign = 'center';
-            lCtx.shadowColor = "#FF1493"; 
-            lCtx.shadowBlur = 40; 
-            lCtx.fillText("I LOVE YOU ❤️", 512, 130);
-            const loveTex = new THREE.CanvasTexture(loveCanvas);
-            const loveMat = new THREE.MeshBasicMaterial({ 
-                map: loveTex, 
-                transparent: true, 
-                opacity: 0.9,
-                blending: THREE.AdditiveBlending 
-            });
-            loveMesh = new THREE.Mesh(new THREE.PlaneGeometry(70, 18), loveMat);
-            loveMesh.position.set(0, 0, 20);
-            loveMesh.visible = false;
-            scene.add(loveMesh);
-            
-            console.log('✅ Decorations created Vandiep');
-        }
-
-        function updateParticleGroup(group, type, targetState, speed, handRotY, time) {
-            const positions = group.geometry.attributes.position.array;
-            const sizes = group.geometry.attributes.size.array;
-            const colors = group.geometry.attributes.color.array;
-            const phases = group.geometry.userData.phases;
-            const baseColor = group.geometry.userData.baseColor;
-            const baseSize = group.geometry.userData.baseSize;
-            
-            const targetKey = (targetState === 'TREE') ? 'tree' : (targetState === 'HEART' ? 'heart' : 'explode');
-            const targets = group.geometry.userData[(targetState === 'PHOTO') ? 'explode' : targetKey];
-
-            // 1. Vandiep
-            for(let i=0; i<positions.length; i++) {
-                positions[i] += (targets[i] - positions[i]) * speed;
-            }
-            group.geometry.attributes.position.needsUpdate = true;
-            
-            // 2. COLOR & SIZE Vandiep
-            const count = positions.length / 3;
-            
-            if (targetState === 'TREE') {
-                group.rotation.y += 0.003;
-                
-                for(let i=0; i<count; i++) {
-                    sizes[i] = baseSize;
-                    let brightness = 1.0;
-                    if(type === 'red') {
-                        // RED
-                        brightness = 0.5 + 0.5 * Math.sin(time * 3 + phases[i]);
-                    } else if(type === 'gold') {
-                        // YELLOW
-                        brightness = 0.8 + 0.4 * Math.sin(time * 10 + phases[i]);
-                    }
-                    colors[i*3]   = baseColor.r * brightness;
-                    colors[i*3+1] = baseColor.g * brightness;
-                    colors[i*3+2] = baseColor.b * brightness;
-                }
-                group.geometry.attributes.color.needsUpdate = true;
-                group.geometry.attributes.size.needsUpdate = true;
-
-            } else if (targetState === 'HEART') {
-                group.rotation.y = 0;
-                const beatScale = 1 + Math.abs(Math.sin(time * 3)) * 0.15;
-                group.scale.set(beatScale, beatScale, beatScale);
-
-                // Vandiep
-                for(let i=0; i<count; i++) {
-                    colors[i*3] = baseColor.r; 
-                    colors[i*3+1] = baseColor.g; 
-                    colors[i*3+2] = baseColor.b;
-                    if (i % 3 === 0) sizes[i] = baseSize;
-                    else sizes[i] = 0;
-                }
-                group.geometry.attributes.color.needsUpdate = true;
-                group.geometry.attributes.size.needsUpdate = true;
-
-            } else {
-                // EXPLODE or PHOTO
-                group.scale.set(1,1,1);
-                group.rotation.y += (handRotY - group.rotation.y) * 0.1;
-
-                // size, color
-                for(let i=0; i<count; i++) {
-                    sizes[i] = baseSize;
-                    let brightness = 1.0;
-                    if(type === 'gold' || type === 'red') {
-                        brightness = 0.8 + 0.5 * Math.sin(time * 12 + phases[i]);
-                    }
-                    colors[i*3]   = baseColor.r * brightness;
-                    colors[i*3+1] = baseColor.g * brightness;
-                    colors[i*3+2] = baseColor.b * brightness;
-                }
-                group.geometry.attributes.size.needsUpdate = true;
-                group.geometry.attributes.color.needsUpdate = true;
             }
         }
 
         function animate() {
             requestAnimationFrame(animate);
             const time = Date.now() * 0.001;
-            const speed = 0.08;
-            const handRotY = (handX - 0.5) * 4.0;
-
-            updateParticleGroup(groupGold, 'gold', state, speed, handRotY, time);
-            updateParticleGroup(groupRed, 'red', state, speed, handRotY, time);
-            updateParticleGroup(groupGift, 'gift', state, speed, handRotY, time);
-
-            // Ensure photo textures are applied Vandiep
-            photoMeshes.forEach((mesh, i) => {
-                if(!mesh.material.map && photoTextures[i]) {
-                    mesh.material.map = photoTextures[i]; 
-                    mesh.material.needsUpdate = true;
-                    console.log(`🔄 Applied texture to photo ${i} Vandiep`);
-                }
-                
-                // Ensure texture is updated Vandiep
-                if (mesh.material.map && mesh.material.map.image) {
-                    mesh.material.map.needsUpdate = true;
-                }
-            });
-
-            if (state === 'TREE') {
-                titleMesh.visible = true; 
-                starMesh.visible = true; 
-                loveMesh.visible = false;
-                titleMesh.scale.lerp(new THREE.Vector3(1,1,1), 0.1);
-                starMesh.rotation.z -= 0.02; 
-                starMesh.material.opacity = 0.7 + 0.3*Math.sin(time*5);
-                photoMeshes.forEach(m => { 
-                    m.scale.lerp(new THREE.Vector3(0,0,0), 0.1); 
-                    m.visible = false; 
-                });
-
-            } else if (state === 'HEART') {
-                titleMesh.visible = false; 
-                starMesh.visible = false; 
-                loveMesh.visible = true;
-                photoMeshes.forEach(m => { m.visible = false; });
-                const s = 1 + Math.abs(Math.sin(time*3))*0.1;
-                loveMesh.scale.set(s,s,1);
-
-            } else if (state === 'EXPLODE') {
-                titleMesh.visible = false; 
-                starMesh.visible = false; 
-                loveMesh.visible = false;
-                const baseAngle = groupGold.rotation.y; 
-                const angleStep = (Math.PI * 2) / 5;
-                let bestIdx = 0; 
-                let maxZ = -999;
-                
+            
+            // Update particles
+            updateParticleGroup(groupGold, state, 0.05, time);
+            updateParticleGroup(groupRed, state, 0.05, time);
+            updateParticleGroup(groupGift, state, 0.05, time);
+            
+            // Update photos in EXPLODE mode
+            if (state === 'EXPLODE') {
                 photoMeshes.forEach((mesh, i) => {
-                    mesh.visible = true;
-                    const angle = baseAngle + i * angleStep;
-                    const x = Math.sin(angle) * CONFIG.photoOrbitRadius;
-                    const z = Math.cos(angle) * CONFIG.photoOrbitRadius;
-                    const y = Math.sin(time + i) * 3; 
-                    
-                    mesh.position.lerp(new THREE.Vector3(x, y, z), 0.1);
-                    mesh.lookAt(camera.position);
-                    
-                    if (z > maxZ) { 
-                        maxZ = z; 
-                        bestIdx = i; 
-                    }
-                    
-                    if (z > 5) { 
-                        const ds = 1.0 + (z/CONFIG.photoOrbitRadius)*0.8; 
-                        mesh.scale.lerp(new THREE.Vector3(ds, ds, ds), 0.1);
-                    } else {
-                        mesh.scale.lerp(new THREE.Vector3(0.6, 0.6, 0.6), 0.1);
-                    }
-                });
-                selectedIndex = bestIdx;
-
-            } else if (state === 'PHOTO') {
-                loveMesh.visible = false;
-                photoMeshes.forEach((mesh, i) => {
-                    if (i === selectedIndex) {
-                        mesh.position.lerp(new THREE.Vector3(0, 0, 60), 0.1);
-                        mesh.scale.lerp(new THREE.Vector3(5, 5, 5), 0.1);
-                        mesh.lookAt(camera.position); 
-                        mesh.rotation.z = 0;
+                    if (photoTextures[i]) {
                         mesh.visible = true;
-                    } else {
-                        mesh.scale.lerp(new THREE.Vector3(0,0,0), 0.1);
-                        mesh.visible = false;
+                        const angle = time * 0.5 + (i * Math.PI * 2 / 5);
+                        mesh.position.x = Math.cos(angle) * CONFIG.photoOrbitRadius;
+                        mesh.position.z = Math.sin(angle) * CONFIG.photoOrbitRadius;
+                        mesh.position.y = Math.sin(time + i) * 2;
+                        mesh.lookAt(camera.position);
+                        const scale = 0.5 + Math.abs(Math.sin(time + i)) * 0.3;
+                        mesh.scale.set(scale, scale, scale);
                     }
+                });
+            } else {
+                photoMeshes.forEach(mesh => {
+                    mesh.visible = false;
                 });
             }
-            
-            // Update debug info Vandiep
-            updateDebugInfo();
             
             renderer.render(scene, camera);
         }
 
-        function startSystem() {
-            try {
-                console.log('🚀 Starting Magic Christmas System... Vandiep');
-                systemStarted = true;
-                
-                document.getElementById('btnStart').style.display = 'none';
-                document.getElementById('debug-system').textContent = "STARTING...";
-                document.getElementById('debug-system').className = "debug-warning";
-                
-                // Start loading textures Vandiep
-                loadTextures();
-                
-                // Try to play music Vandiep
-                bgMusic.play().catch(e => {
-                    console.warn('⚠️ Music autoplay blocked:', e);
-                    // Add play button for music Vandiep
-                    const musicBtn = document.createElement('button');
-                    musicBtn.textContent = "CLICK TO PLAY MUSIC";
-                    musicBtn.style.position = "absolute";
-                    musicBtn.style.top = "100px";
-                    musicBtn.style.left = "50%";
-                    musicBtn.style.transform = "translateX(-50%)";
-                    musicBtn.style.zIndex = "1000";
-                    musicBtn.onclick = () => {
-                        bgMusic.play();
-                        musicBtn.remove();
-                    };
-                    document.body.appendChild(musicBtn);
-                });
-                
-                // Initialize 3D Vandiep
-                init3D();
-
-                // Initialize hand tracking Vandiep
-                initHandTracking();
-                
-                console.log('✅ System started successfully Vandiep');
-                
-            } catch (error) {
-                logError(`System startup failed: ${error.message}`);
-                document.getElementById('debug-system').textContent = "ERROR";
-                document.getElementById('debug-system').className = "debug-error";
+        function updateParticleGroup(group, state, speed, time) {
+            const positions = group.geometry.attributes.position.array;
+            const targets = group.geometry.userData[state === 'TREE' ? 'tree' : 'explode'];
+            
+            for(let i = 0; i < positions.length; i++) {
+                positions[i] += (targets[i] - positions[i]) * speed;
+            }
+            
+            group.geometry.attributes.position.needsUpdate = true;
+            
+            // Add some animation
+            group.rotation.y += 0.005;
+            if (state === 'EXPLODE') {
+                group.material.opacity = 0.7 + Math.sin(time * 3) * 0.3;
+            } else {
+                group.material.opacity = 0.8;
             }
         }
-        
+
+        function startSystem() {
+            console.log("🎄 Starting Magic Christmas...");
+            document.getElementById('btnStart').style.display = 'none';
+            document.getElementById('debug-state').textContent = 'STARTED';
+            
+            // Try to play music
+            bgMusic.play().catch(e => {
+                console.log("Note: Music autoplay blocked - user interaction required");
+            });
+            
+            // Load textures first, then init 3D
+            loadTextures();
+            setTimeout(() => {
+                init3D();
+                initHandTracking();
+            }, 1000);
+        }
+
         function initHandTracking() {
-            const video = document.getElementsByClassName('input_video')[0];
+            const video = document.querySelector('.input_video');
             const canvas = document.getElementById('camera-preview');
             const ctx = canvas.getContext('2d');
-            
-            // Set canvas size Vandiep
-            canvas.width = 120;
-            canvas.height = 90;
             
             const hands = new Hands({
                 locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
             });
             
-            hands.setOptions({ 
-                maxNumHands: 2, 
-                modelComplexity: 1, 
-                minDetectionConfidence: 0.5, 
-                minTrackingConfidence: 0.5 
+            hands.setOptions({
+                maxNumHands: 1,
+                modelComplexity: 1,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
             });
 
             hands.onResults((results) => {
-                try {
-                    // Draw camera preview Vandiep
+                if (canvas) {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     if (results.image) {
                         ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
                     }
+                }
+                
+                if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                    const landmarks = results.multiHandLandmarks[0];
+                    handX = landmarks[9].x; // Middle finger base
                     
-                    // --- Hand Logic Vandiep ---
-                    if (results.multiHandLandmarks && results.multiHandLandmarks.length === 2) {
-                        const h1 = results.multiHandLandmarks[0]; 
-                        const h2 = results.multiHandLandmarks[1];
-                        const distIndex = Math.hypot(h1[8].x - h2[8].x, h1[8].y - h2[8].y);
-                        const distThumb = Math.hypot(h1[4].x - h2[4].x, h1[4].y - h2[4].y);
-                        
-                        if (distIndex < 0.15 && distThumb < 0.15) {
-                            state = 'HEART'; 
-                            return;
-                        }
-                    }
-
-                    if(results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                        const lm = results.multiHandLandmarks[0];
-                        handX = lm[9].x; 
-                        
-                        const tips = [8, 12, 16, 20]; 
-                        const wrist = lm[0];
-                        let openDist = 0; 
-                        
-                        tips.forEach(i => {
-                            openDist += Math.hypot(lm[i].x - wrist.x, lm[i].y - wrist.y);
-                        });
-                        
-                        const avgDist = openDist / 4;
-                        const pinchDist = Math.hypot(lm[4].x - lm[8].x, lm[4].y - lm[8].y);
-
-                        if (avgDist < 0.25) { 
-                            state = 'TREE'; 
-                        } else if (pinchDist < 0.05) {
-                            state = 'PHOTO'; 
-                        } else {
-                            state = 'EXPLODE'; 
-                        }
+                    // Simple gesture detection
+                    const thumbTip = landmarks[4];
+                    const indexTip = landmarks[8];
+                    const middleTip = landmarks[12];
+                    
+                    const thumbIndexDist = Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y);
+                    const indexMiddleDist = Math.hypot(indexTip.x - middleTip.x, indexTip.y - middleTip.y);
+                    
+                    if (thumbIndexDist < 0.05) {
+                        state = 'PHOTO';
+                    } else if (indexMiddleDist < 0.1) {
+                        state = 'TREE';
                     } else {
-                        state = 'TREE'; 
+                        state = 'EXPLODE';
                     }
-                } catch (error) {
-                    console.warn('⚠️ Hand tracking error:', error);
+                    
+                    document.getElementById('debug-state').textContent = state;
                 }
             });
-
-            // Start camera Vandiep
+            
             const camera = new Camera(video, {
                 onFrame: async () => {
-                    try {
-                        await hands.send({image: video});
-                    } catch (error) {
-                        console.warn('⚠️ Camera frame error:', error);
-                    }
-                }, 
-                width: 320, 
+                    await hands.send({image: video});
+                },
+                width: 320,
                 height: 240
             });
             
-            camera.start().catch(e => {
-                console.error('❌ Camera access failed:', e);
-                logError('Camera access denied. Please allow camera permissions.');
-            });
+            camera.start();
         }
 
         window.addEventListener('resize', () => {
-            if(camera && renderer) { 
-                camera.aspect = window.innerWidth / window.innerHeight; 
-                camera.updateProjectionMatrix(); 
-                renderer.setSize(window.innerWidth, window.innerHeight); 
+            if (camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
             }
-        });
-        
-        // Initialize textures on page load Vandiep
-        window.addEventListener('DOMContentLoaded', () => {
-            console.log('🎄 Magic Christmas loaded Vandiep');
-            console.log('Click START MAGIC to begin Vandiep');
-            
-            // Pre-check for audio Vandiep
-            const testAudio = new Audio();
-            testAudio.src = MUSIC_URL;
-            testAudio.load();
-            
-            testAudio.addEventListener('error', (e) => {
-                console.warn('⚠️ Audio file may not exist:', MUSIC_URL);
-            });
-            
-            testAudio.addEventListener('loadeddata', () => {
-                console.log('✅ Audio file exists:', MUSIC_URL);
-            });
         });
     </script>
 </body>
